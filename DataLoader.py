@@ -5,7 +5,7 @@ import math
 from extract_OptiSystem import extract_OptiSystem
 # Combination of data and label from files in folder into an array of num_data*4*signal_size and 1*num_data
 class DataLoader():
-    def __init__(self,signal_size,label,train_path,test_path):
+    def __init__(self,signal_size,nominalsymbolrate,label,train_path,test_path):
         self.train_label = []
         self.train_data  = []
         self.num_train_data = 0
@@ -19,9 +19,9 @@ class DataLoader():
         # train data (nparray[num_train_data,4,signal_size]) and label (nparray[num_train_data]) extraction
         for filename in trainfilelist:
             filepath = os.path.join(train_path,filename)
-            data_loader = extract_OptiSystem(filepath)
+            data_loader = extract_OptiSystem(filepath,nominalsymbolrate)
 
-            sequencelength = data_loader.params('SequenceLength')
+            sequencelength = data_loader.Params.SequenceLengthInterpolated
             num_signal_cur_file = math.floor(sequencelength/signal_size)
             train_label_cur_file = data_loader.params(label)
             # calculation the total number of training data with varying sequence lengthes in files
@@ -37,16 +37,16 @@ class DataLoader():
         #test data extraction
         for filename in testfilelist:
             filepath = os.path.join(test_path,filename)
-            data_loader = extract_OptiSystem(filepath)
+            data_loader = extract_OptiSystem(filepath,nominalsymbolrate)
 
-            sequencelength = data_loader.params('SequenceLength')
+            sequencelength = data_loader.Params.SequenceLengthInterpolated
             num_signal_cur_file = math.floor(sequencelength/signal_size)
             test_label_cur_file = data_loader.params(label)
             # calculation the total number of training data with varying sequence lengthes in files
             self.num_test_data += num_signal_cur_file
-            # extract training label
+            # extract test label
             self.test_label.append(np.zeros(num_signal_cur_file)+test_label_cur_file)
-            # extract training data
+            # extract test data
             self.test_data.append(data_loader.signal_channel(signal_size))
         
         self.test_data = np.array(self.test_data).reshape(-1,4,signal_size)
@@ -58,13 +58,18 @@ class DataLoader():
 
 if __name__ == '__main__':
     signal_size = 512
+    nominalsymbolrate = 0.5
     label = 'OSNR'
-    train_path = 'F:/tempo sim data/224Gbpers_28GBaud_DP-16QAM_1Saperb_18dB_2dBm_0.01-0.6/train_data/'
-    test_path = 'F:/tempo sim data/224Gbpers_28GBaud_DP-16QAM_1Saperb_18dB_2dBm_0.01-0.6/test_data/'
-    dataloader = DataLoader(signal_size,label,train_path,test_path)
-    print(dataloader.train_data[64,1,2])
-    print(dataloader.train_label.shape)
+    train_path = 'F:/tempo sim data/112Gbpers_28GBaud_DP-QPSK_1Saperb_2dBm_0.01/train_data/'
+    test_path = 'F:/tempo sim data/112Gbpers_28GBaud_DP-QPSK_1Saperb_2dBm_0.01/test_data/'
+    dataloader = DataLoader(signal_size,nominalsymbolrate,label,train_path,test_path)
+    print('---------train part test---------')
+    print('train_data shape:',dataloader.train_data.shape)
     print(dataloader.test_data.shape)
-    print(dataloader.test_label.shape)
+    print('train_label shape:',dataloader.train_label.shape)
+    print('---------test part test---------')
+    print('test_data shape:',dataloader.test_data.shape)
+    print('test_label shape',dataloader.test_label.shape)
+    print('---------get_batch() test---------')
     traindata,trainlabel = dataloader.get_batch(2)
-    print(traindata.shape,'\n',trainlabel)
+    print('traindata in batch:',traindata.shape,'\n','trainlabel in batch:\n',trainlabel)
