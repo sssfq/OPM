@@ -53,7 +53,7 @@ def trainevalfun(
         y_pred = model.predict(np.rollaxis(dataloader.test_data[start_index: end_index],1,3))
         mae.update_state(y_true=dataloader.test_label[start_index: end_index], y_pred=y_pred)
         # print("Mean absolute error of OSNR estimation: %f" % mae.result())
-    return mae.result()
+    return -mae.result()
 
 if __name__ == '__main__':
     trainevalfun(num_epochs=1)
