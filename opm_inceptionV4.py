@@ -5,6 +5,8 @@ import tensorflow as tf
 from tensorflow.keras import layers, Sequential, Model
 import numpy as np
 from tensorflow.python.eager.function import BACKWARD_FUNCTION_ATTRIBUTE_NAME
+from tensorflow.python.keras.activations import linear
+from tensorflow.python.keras.layers.pooling import AveragePooling1D, AveragePooling2D
 from tensorflow.python.keras.utils.version_utils import ModelVersionSelector
 from DataLoader import DataLoader
 
@@ -25,6 +27,24 @@ class BasicConv1D(layers.Layer):
         x = self.conv(inputs)
         x = self.bn(x,training=training)
         x = self.relu(x)
+        return x
+
+class LinearConv1D(layers.Layer):
+    def __init__(self, filters, kernel_size, strides=1, padding='valid'):
+        super().__init__()
+        self.conv = layers.Conv1D(
+            filters,
+            kernel_size,
+            strides=strides,
+            padding=padding,
+            use_bias=False
+        )
+        self.bn = layers.BatchNormalization()
+        self.relu = layers.ReLU()
+
+    def call(self, inputs, training=False):
+        x = self.conv(inputs)
+        x = self.bn(x,training=training)
         return x
 
 class Stem(layers.Layer):
@@ -481,21 +501,189 @@ class InceptionResNetV2(Model):
 
         return x
 
+class Inception1(layers.Layer):
+    def __init__(self):
+        super().__init__()
+        self.branch1 = LinearConv1D(8,512,padding='same')
+
+        self.branch2 = LinearConv1D(16,256,padding='same')
+        
+        self.branch3 = Sequential([
+            LinearConv1D(32,1,padding='same'),
+            LinearConv1D(8,128,padding='same')
+        ])
+
+
+    def call(self, x, training=False):
+        x = [
+            self.branch1(x,training=training),
+            self.branch2(x,training=training),
+            self.branch3(x,training=training)
+        ]
+        x = tf.concat(x,axis=-1)
+        
+        return x
+
+class Reduction1(layers.Layer):
+    def __init__(self):
+        super().__init__()
+        self.branch1 = AveragePooling1D(pool_size=513,strides=1)
+
+        self.branch2 = BasicConv1D(32,513)
+
+        self.branch3 = Sequential([
+            BasicConv1D(64,1),
+            BasicConv1D(16,513)
+        ])
+
+    def call(self, x, training=False):
+        x = [
+            self.branch1(x),
+            self.branch2(x,training=training),
+            self.branch3(x,training=training)
+        ]
+        x = tf.concat(x,axis=-1)
+        return x
+
+class InceptionResNet1(layers.Layer):
+    def __init__(self):
+        super().__init__()
+        self.branch1 = BasicConv1D(64,1,padding='same')
+        self.branch2 = Sequential([
+            BasicConv1D(32,1,padding='same'),
+            BasicConv1D(64,3,padding='same')
+        ])
+        self.branch3 = Sequential([
+            BasicConv1D(32,1,padding='same'),
+            BasicConv1D(48,5,padding='same'),
+            BasicConv1D(64,3,padding='same')
+        ])
+        self.inception = LinearConv1D(80,3,padding='same')
+
+        self.bn = layers.BatchNormalization()
+        self.relu = layers.ReLU()
+
+    def call(self,x,training=False):
+        residual = [
+            self.branch1(x,training=training),
+            self.branch2(x,training=training),
+            self.branch3(x,training=training)
+        ]
+        residual = tf.concat(residual,axis=-1)
+        residual = self.inception(residual,training=training)
+
+        shortcut = x
+        output = self.bn(shortcut+residual*0.1)
+        output = self.relu(output)
+
+        return output
+
+class Reduction2(layers.Layer):
+    def __init__(self):
+        super().__init__()
+        self.branch1 = AveragePooling1D(pool_size=8,strides=8)
+
+        self.branch2 = BasicConv1D(64,8,strides=8)
+
+        self.branch3 = Sequential([
+            BasicConv1D(32,1),
+            BasicConv1D(64,8,strides=8)
+        ])
+
+    def call(self, x, training=False):
+        x = [
+            self.branch1(x),
+            self.branch2(x,training=training),
+            self.branch3(x,training=training)
+        ]
+        x = tf.concat(x,axis=-1)
+        return x
+
+class InceptionResNet2(layers.Layer):
+    def __init__(self):
+        super().__init__()
+        self.branch1 = BasicConv1D(120,1,padding='same')
+        self.branch2 = Sequential([
+            BasicConv1D(128,1,padding='same'),
+            BasicConv1D(72,3,padding='same')
+        ])
+        self.branch3 = Sequential([
+            AveragePooling1D(pool_size=5,padding='same',strides=1),
+            BasicConv1D(64,1,padding='same')
+        ])
+        self.inception = LinearConv1D(208,64,padding='same')
+
+        self.bn = layers.BatchNormalization()
+        self.relu = layers.ReLU()
+
+    def call(self,x,training=False):
+        residual = [
+            self.branch1(x,training=training),
+            self.branch2(x,training=training),
+            self.branch3(x,training=training)
+        ]
+        residual = tf.concat(residual,axis=-1)
+        residual = self.inception(residual,training=training)
+
+        shortcut = x
+        output = self.bn(shortcut+residual*0.1)
+        output = self.relu(output)
+
+        return output
+
+class InceptionOSNR(Model):
+    def __init__(self,input_shape):
+        super().__init__()
+        self.inputlayer = Sequential([layers.Input(input_shape)])
+        self.inception_1 = Inception1()
+        self.reduction_1 = Reduction1()
+        self.inceptionres_1 = InceptionResNet1()
+        self.reduction_2 = Reduction2()
+        self.inceptionres_2 = InceptionResNet2()
+
+        self.averagepool = layers.AveragePooling1D(pool_size=16,strides=16)
+        self.dropout = layers.Dropout(0.2)
+        self.flatten = layers.Flatten()
+        self.bn = layers.BatchNormalization()
+        self.layer1 = layers.Dense(units=832,activation=tf.nn.relu)
+        self.layer2 = layers.Dense(units=832,activation=tf.nn.relu)
+        self.layer3 = layers.Dense(units=1)
+
+    def call(self, input, training=False):
+        x = self.inputlayer(input)
+        x = self.inception_1(x, training=training)
+        x = self.reduction_1(x, training=training)
+        x = self.inceptionres_1(x, training=training)
+        x = self.reduction_2(x, training=training)
+        x = self.inceptionres_2(x, training=training)
+        
+        x = self.averagepool(x)
+        x = self.dropout(x, training=training)
+        x = self.flatten(x)
+        x = self.bn(x,training=training)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+
+        return x
 if __name__ == '__main__':
     signal_size = 1024
-    model1 = InceptionV4(input_shape=(signal_size,4))
-    print('InceptionV4 Instantiation Success!')
+    # model1 = InceptionV4(input_shape=(signal_size,4))
+    # print('InceptionV4 Instantiation Success!')
 
-    model2 = InceptionV4_simplified(input_shape=(signal_size,4))
-    print('InceptionV4_simplified Instantiation Success!')
+    # model2 = InceptionV4_simplified(input_shape=(signal_size,4))
+    # print('InceptionV4_simplified Instantiation Success!')
 
-    model3 = InceptionResNetV2(input_shape=(signal_size,4))
-    print('InceptionV4_simplified Instantiation Success!')
+    # model3 = InceptionResNetV2(input_shape=(signal_size,4))
+    # print('InceptionResNetV2 Instantiation Success!')
+
+    model4 = InceptionOSNR(input_shape=(signal_size,4))
+    print('InceptionOSNR Instantiation Success!')
 
     signal = np.random.randn(5,signal_size,4)
-    y_pred = model1.predict(signal)
+    y_pred = model4.predict(signal)
     print(y_pred.shape)
-    y_call = model1(signal)
+    y_call = model4(signal)
     print(y_call.shape)
 
 
