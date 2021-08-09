@@ -113,7 +113,7 @@ class extract_OptiSystem():
         return Params
 
 if __name__ == '__main__':
-    filepath = 'F:/tempo sim data/112Gbpers_28GBaud_DP-QPSK_1Saperb_2dBm_0.01/112Gbpers_28GBaud_DP-QPSK_20dB_2dBm_131072_400km_No.165.mat'
+    filepath = 'D:/OneDrive/Postgraduate/Optical performance monitoring (OPM)/proj/OPM/112Gbpers_28GBaud_DP-QPSK_10dB_2dBm_131072_400km_No.1.mat'
     NominalSymbolRate = 0.5
     data_loader = extract_OptiSystem(filepath,NominalSymbolRate)
     print('---------__init__() test---------')
