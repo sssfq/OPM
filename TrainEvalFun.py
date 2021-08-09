@@ -4,9 +4,9 @@ from DataLoader import DataLoader
 import opm_inceptionV4
 
 def trainevalfun(
-    batch_size=20,learning_rate=0.0001,
+    batch_size=50,learning_rate=0.0001,
     signal_size=1024,nominalsymbolrate=0.5,
-    num_epochs=5,label='OSNR',
+    num_epochs=10,label='OSNR',
     train_path='F:/tempo sim data/112Gbpers_28GBaud_DP-QPSK_1Saperb_2dBm_0.01/train_data/',
     test_path='F:/tempo sim data/112Gbpers_28GBaud_DP-QPSK_1Saperb_2dBm_0.01/test_data/'
     ):
@@ -47,13 +47,13 @@ def trainevalfun(
     checkpoint.save('./checkpoint/model'+str(batch_size)+'_'+str(learning_rate)+'.ckpt')
     # Evaluation
     mae = tf.keras.metrics.MeanAbsoluteError()
-    num_batches = int(dataloader.num_test_data // batch_size)
-    for batch_index in range(num_batches):
-        start_index, end_index = batch_index*batch_size, (batch_index + 1) * batch_size
+    num_batches_test = int(dataloader.num_test_data // batch_size)
+    for batch_index_test in range(num_batches_test):
+        start_index, end_index = batch_index_test*batch_size, (batch_index_test + 1) * batch_size
         y_pred = model.predict(np.rollaxis(dataloader.test_data[start_index: end_index],1,3))
         mae.update_state(y_true=dataloader.test_label[start_index: end_index], y_pred=y_pred)
     print("Mean absolute error of OSNR estimation:",mae.result())
     return -mae.result()
 
 if __name__ == '__main__':
-    trainevalfun(num_epochs=1)
+    trainevalfun(batch_size=40,num_epochs=6,learning_rate=0.0005)

@@ -4,7 +4,7 @@ from DataLoader import DataLoader
 import opm_inceptionV4
 
 # hyperparameter
-num_epochs = 10
+num_epochs = 5
 batch_size = 30
 learning_rate = 0.0001
 # Instantiate
