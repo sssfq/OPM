@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "c:\Users\…Ú∑Ω∆Â\.vscode\extensions\ms-python.python-2021.5.926500501\pythonFiles\shell_exec.py", line 26, in <module>
-    subprocess.check_call(shell_args, stdout=sys.stdout, stderr=sys.stderr)
-  File "E:\software\conda\envs\opm_cnn\lib\subprocess.py", line 363, in check_call
-    raise CalledProcessError(retcode, cmd)
-subprocess.CalledProcessError: Command '['conda', 'install', '-c', 'conda-forge', '--name', 'opm_cnn', 'tensorboard', '-y', 'C:/Temp/tmp-41312JbWaoEW2aig8.logconda', 'activate']' returned non-zero exit status 2.
