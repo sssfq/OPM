@@ -94,17 +94,22 @@ class extract_OptiSystem():
             self.Params.BitRate = self.Params['BitRate'][0,0]
             return self.Params.BitRate
 
+        def chromaticdispersion():
+            self.Params.ChromaticDispersion = self.Params['ChromaticDispersion'][0,0]
+            return self.Params.ChromaticDispersion
+
         # def sequencelengthinterpolated():
         #     SequenceLengthInterpolated = int(self.Params['SequenceLengthInterpolated'][:])
         #     return SequenceLengthInterpolated
         
         ParamsAll = np.array([osnr(),rolloff(),saperbit(),\
                               sequencelength(),signalpower(),\
-                              symbolrate(),bitrate()])
+                              symbolrate(),bitrate(),chromaticdispersion()])
 
         ParamsList = {'OSNR' : osnr(), 'Rolloff' : rolloff(), 'Saperbit' : saperbit(),
                       'SequenceLength' : sequencelength(), 'SignalPower' : signalpower(),
-                      'SymbolRate': symbolrate(), 'BitRate' : bitrate(), 'All' : ParamsAll}
+                      'SymbolRate': symbolrate(), 'BitRate' : bitrate(), 
+                      'ChromaticDispersion':chromaticdispersion(),'All' : ParamsAll}
                     #   'SequenceLengthInterpolated': sequencelengthinterpolated()}
 
         
@@ -113,7 +118,8 @@ class extract_OptiSystem():
         return Params
 
 if __name__ == '__main__':
-    filepath = 'D:/OneDrive/Postgraduate/Optical performance monitoring (OPM)/proj/OPM/112Gbpers_28GBaud_DP-QPSK_10dB_2dBm_131072_400km_No.1.mat'
+    # filepath = 'D:/OneDrive/Postgraduate/Optical performance monitoring (OPM)/proj/OPM/112Gbpers_28GBaud_DP-QPSK_10dB_2dBm_131072_400km_No.1.mat'
+    filepath = 'F:/tempo sim data/truncation_Inf/train/112Gbpers_28GBaud_DP-QPSK_400km_0dB_10dBm_65536_0.7_No.1.mat'
     NominalSymbolRate = 0.5
     data_loader = extract_OptiSystem(filepath,NominalSymbolRate)
     print('---------__init__() test---------')
@@ -135,6 +141,7 @@ if __name__ == '__main__':
     print(type(data_loader.signal_pol()))
     print('x:\n',x.shape,'\n y:\n',y.shape)
     print('Sequence length interpolated:',data_loader.Params.SequenceLengthInterpolated)
+
 
     # params() test
     print('---------param() test---------')
